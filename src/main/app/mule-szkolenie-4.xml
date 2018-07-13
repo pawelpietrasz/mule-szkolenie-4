@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <jms:activemq-connector name="Active_MQ" brokerURL="tcp://localhost:61616" validateConnections="true" doc:name="Active MQ"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <flow name="mule-szkolenie-4Flow">
+        <jms:inbound-endpoint queue="LESSON4.Q.IN" connector-ref="Active_MQ" doc:name="JMS"/>
+        <logger message="#[message]" level="INFO" doc:name="Logger"/>
+       
+        <and-filter doc:name="And">
+            <expression-filter expression="#[message.inboundProperties.JMSCorrelationID!=empty]"/>
+        	<payload-type-filter expectedType="java.lang.String" doc:name="Payload"/>
+        </and-filter>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <logger message="komunikat przeszedl filtry: #[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="mule-szkolenie-4Flow1">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/lesson4" allowedMethods="POST" doc:name="HTTP"/>
+        <choice doc:name="Choice">
+            <when expression="message.inboundProperties.'http.query.params'.type==&quot;STR&quot;">
+                <logger message="wybrano string   #[payload]" level="INFO" doc:name="Logger"/>
+                <object-to-string-transformer doc:name="Object to String"/>
+                <set-payload value="#[payload.split(&quot;,&quot;)]" doc:name="Set Payload"/>
+                <logger message="#[message]" level="INFO" doc:name="Logger"/>
+                <collection-splitter doc:name="Collection Splitter"/>
+                <set-payload value="#[payload]#[payload]" doc:name="Set Payload"/>
+                <jms:outbound-endpoint queue="LESSON4.Q.IN" connector-ref="Active_MQ" doc:name="JMS"/>
+            </when>
+            <when expression="message.inboundProperties.'http.query.params'.type==&quot;BIN&quot;">
+                <logger message="wybrano tablice byte[]" level="INFO" doc:name="Logger"/>
+                <object-to-byte-array-transformer doc:name="Object to Byte Array"/>
+                <jms:outbound-endpoint queue="LESSON4.Q.IN" connector-ref="Active_MQ" doc:name="JMS"/>
+            </when>
+            <otherwise>
+                <logger message="brak query param lub niewlasciwa wartosc" level="INFO" doc:name="Logger"/>
+            </otherwise>
+        </choice>
+        <set-payload value="#['ok']" doc:name="Set Payload"/>
+    </flow>
+</mule>
