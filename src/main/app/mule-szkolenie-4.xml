@@ -29,9 +29,11 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
                 <object-to-string-transformer doc:name="Object to String"/>
                 <set-payload value="#[payload.split(&quot;,&quot;)]" doc:name="Set Payload"/>
                 <logger message="#[message]" level="INFO" doc:name="Logger"/>
-                <collection-splitter doc:name="Collection Splitter"/>
-                <set-payload value="#[payload]#[payload]" doc:name="Set Payload"/>
-                <jms:outbound-endpoint queue="LESSON4.Q.IN" connector-ref="Active_MQ" doc:name="JMS"/>
+                <async doc:name="Async">
+                    <collection-splitter doc:name="Collection Splitter"/>
+                    <set-payload value="#[payload]#[payload]" doc:name="Set Payload"/>
+                    <jms:outbound-endpoint queue="LESSON4.Q.IN" connector-ref="Active_MQ" doc:name="JMS"/>
+                </async>
             </when>
             <when expression="message.inboundProperties.'http.query.params'.type==&quot;BIN&quot;">
                 <logger message="wybrano tablice byte[]" level="INFO" doc:name="Logger"/>
@@ -42,6 +44,6 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
                 <logger message="brak query param lub niewlasciwa wartosc" level="INFO" doc:name="Logger"/>
             </otherwise>
         </choice>
-        <set-payload value="#['ok']" doc:name="Set Payload"/>
+        <set-payload value="ok" doc:name="Set Payload"/>
     </flow>
 </mule>
